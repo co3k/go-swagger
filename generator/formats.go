@@ -94,11 +94,13 @@ var stringFormatters = map[string]string{
 
 // typeMapping contains a mapping of type name to go type
 var typeMapping = map[string]string{
+	// Standard formats with native, straightforward, mapping
 	"string":  "string",
-	"number":  "float64",
-	"integer": "int64",
 	"boolean": "bool",
-	"file":    "io.ReadCloser",
+	"integer": "int64",
+	"number":  "float64",
+	// For file producers
+	"file": "runtime.File",
 }
 
 // formatMapping contains a type-specific version of mapping of format to go type

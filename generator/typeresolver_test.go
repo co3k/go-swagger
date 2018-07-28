@@ -595,7 +595,7 @@ func TestTypeResolver_AliasTypes(t *testing.T) {
 func assertPrimitiveResolve(t testing.TB, tpe, tfmt, exp string, tr resolvedType) {
 	assert.Equal(t, tpe, tr.SwaggerType, fmt.Sprintf("expected %q (%q, %q) to for the swagger type but got %q", tpe, tfmt, exp, tr.SwaggerType))
 	assert.Equal(t, tfmt, tr.SwaggerFormat, fmt.Sprintf("expected %q (%q, %q) to for the swagger format but got %q", tfmt, tpe, exp, tr.SwaggerFormat))
-	assert.Equal(t, exp, tr.GoType, fmt.Sprintf("expected %q (tpe:%q, fmt:%q) to for the go type but got gotype:%q", exp, tpe, tfmt, tr.GoType))
+	assert.Equal(t, exp, tr.GoType, fmt.Sprintf("expected %q (%q, %q) to for the go type but got %q", exp, tpe, tfmt, tr.GoType))
 }
 
 func TestTypeResolver_ExistingModel(t *testing.T) {

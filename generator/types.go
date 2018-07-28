@@ -267,36 +267,31 @@ func (t *typeResolver) resolveFormat(schema *spec.Schema, isAnonymous bool, isRe
 
 		debugLog("resolving format (anon: %t, req: %t)", isAnonymous, isRequired)
 		schFmt := strings.Replace(schema.Format, "-", "", -1)
-		debugLog("try fmmm: %s", tn)
 		if fmm, ok := formatMapping[tn]; ok {
-			debugLog("ok fmmm: %s", tn)
-			debugLog("try tpe: %s %s", tn, schFmt)
 			if tpe, ok := fmm[schFmt]; ok {
 				returns = true
 				result.GoType = tpe
+				_, result.IsCustomFormatter = customFormatters[tpe]
 			}
 		}
-
-		if tpe, ok := typeMapping[tn]; !returns && ok {
+		if tpe, ok := typeMapping[schFmt]; !returns && ok {
 			returns = true
 			result.GoType = tpe
+			_, result.IsCustomFormatter = customFormatters[tpe]
 		}
 
-		if returns {
-			result.SwaggerType = str
-			if len(schema.Type) > 0 {
-				result.SwaggerType = schema.Type[0]
-			}
-			result.SwaggerFormat = schema.Format
-			t.inferAliasing(&result, schema, isAnonymous, isRequired)
-			// special case of swagger format "binary", rendered as io.ReadCloser interface and is therefore not a primitive type
-			// TODO: should set IsCustomFormatter=false in this case.
-			result.IsPrimitive = schFmt != binary
-			result.IsStream = schFmt == binary
-			_, result.IsCustomFormatter = customFormatters[result.GoType]
-			// propagate extensions in resolvedType
-			result.Extensions = schema.Extensions
+		result.SwaggerType = str
+		if len(schema.Type) > 0 {
+			result.SwaggerType = schema.Type[0]
 		}
+		result.SwaggerFormat = schema.Format
+		t.inferAliasing(&result, schema, isAnonymous, isRequired)
+		// special case of swagger format "binary", rendered as io.ReadCloser interface and is therefore not a primitive type
+		// TODO: should set IsCustomFormatter=false in this case.
+		result.IsPrimitive = schFmt != binary
+		result.IsStream = schFmt == binary
+		// propagate extensions in resolvedType
+		result.Extensions = schema.Extensions
 
 		switch result.SwaggerType {
 		case str:
@@ -306,7 +301,6 @@ func (t *typeResolver) resolveFormat(schema *spec.Schema, isAnonymous bool, isRe
 		default:
 			result.IsNullable = t.IsNullable(schema)
 		}
-		return
 	}
 	return
 }
@@ -622,11 +616,10 @@ func boolExtension(ext spec.Extensions, key string) *bool {
 }
 
 func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequired bool) (result resolvedType, err error) {
-	debugLog("resolving schema (anon: %t, req: %t) name: %s", isAnonymous, isRequired, t.ModelName)
+	debugLog("resolving schema (anon: %t, req: %t) %s", isAnonymous, isRequired, t.ModelName)
 	if schema == nil {
 		result.IsInterface = true
 		result.GoType = iface
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 	}
 
@@ -639,7 +632,6 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 			debugLog("not anonymous ref")
 		}
 		debugLog("returning after ref")
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 	}
 
@@ -650,14 +642,12 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 		result.IsNullable = false
 		result.GoType = formatMapping[str][binary]
 		result.IsStream = true
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 	}
 
 	returns, result, err = t.resolveFormat(schema, isAnonymous, isRequired)
 	if returns {
 		debugLog("returning after resolve format: %s", pretty.Sprint(result))
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 	}
 
@@ -665,7 +655,6 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 	tpe := t.firstType(schema)
 	switch tpe {
 	case array:
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return t.resolveArray(schema, isAnonymous, false)
 
 	case file, number, integer, boolean:
@@ -685,12 +674,9 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 			result.IsNullable = nullableNumber(schema, isRequired)
 		case file:
 		}
-		debugLog("number converted as %s", pretty.Sprint(result))
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 
 	case str:
-		debugLog("str converted as %s", pretty.Sprint(result))
 		result.GoType = str
 		result.SwaggerType = str
 		t.inferAliasing(&result, schema, isAnonymous, isRequired)
@@ -698,7 +684,6 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 		result.IsPrimitive = true
 		result.IsNullable = nullableString(schema, isRequired)
 		result.Extensions = schema.Extensions
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 
 	case object:
@@ -707,7 +692,6 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 			return resolvedType{}, err2
 		}
 		rt.HasDiscriminator = schema.Discriminator != ""
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return rt, nil
 
 	case "null":
@@ -715,12 +699,10 @@ func (t *typeResolver) ResolveSchema(schema *spec.Schema, isAnonymous, isRequire
 		result.SwaggerType = object
 		result.IsNullable = false
 		result.IsInterface = true
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 
 	default:
 		err = fmt.Errorf("unresolvable: %v (format %q)", schema.Type, schema.Format)
-		debugLog("name: %s, resolved as: %s", t.ModelName, pretty.Sprint(result))
 		return
 	}
 }
